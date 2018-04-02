@@ -10,7 +10,7 @@
 #import "GPUImage.h"
 #import "GPUImageBeautifyFilter.h"
 #import "Masonry.h"
-
+#import "LFGPUImageBeautyFilter.h"
 @interface ViewController ()
 
 @property (nonatomic, strong) GPUImageVideoCamera *videoCamera;
@@ -60,7 +60,9 @@
     else {
         self.beautifyButton.selected = YES;
         [self.videoCamera removeAllTargets];
-        GPUImageBeautifyFilter *beautifyFilter = [[GPUImageBeautifyFilter alloc] init];
+//        GPUImageBeautifyFilter *beautifyFilter = [[GPUImageBeautifyFilter alloc] init];
+//        [self.videoCamera addTarget:beautifyFilter];
+        LFGPUImageBeautyFilter*beautifyFilter = [[LFGPUImageBeautyFilter alloc] init];
         [self.videoCamera addTarget:beautifyFilter];
         [beautifyFilter addTarget:self.filterView];
     }

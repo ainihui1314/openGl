@@ -7,7 +7,8 @@
 //
 
 #import "AppDelegate.h"
-
+#import "GPUImageStillCameraVC.h"
+#import "GPUimagePicrtVC.h"
 @interface AppDelegate ()
 
 @end
@@ -17,6 +18,8 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
+    GPUimagePicrtVC *stillCameraVC=[[GPUimagePicrtVC alloc]init];
+    self.window.rootViewController=stillCameraVC;
     return YES;
 }
 
