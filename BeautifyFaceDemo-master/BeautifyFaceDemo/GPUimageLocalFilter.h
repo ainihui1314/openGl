@@ -9,9 +9,6 @@
 #import "GPUImageFilter.h"
 
 @interface GPUimageLocalFilter : GPUImageFilter
-
-/** A 4x4 matrix used to transform each color in an image
- */
-@property(readwrite, nonatomic) CGFloat pionrMatrix;
+@property(readwrite, nonatomic) GLfloat *pioneNumber;
 
 @end

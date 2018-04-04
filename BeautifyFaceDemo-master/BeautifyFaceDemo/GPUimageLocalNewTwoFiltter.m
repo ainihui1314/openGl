@@ -1,6 +1,14 @@
-#import "GPUImageTwoInputFilter.h"
+//
+//  GPUimageLocalNewTwoFiltter.m
+//  BeautifyFaceDemo
+//
+//  Created by Mac on 2018/4/4.
+//  Copyright © 2018年 guikz. All rights reserved.
+// GPUImageHistogramFilter
 
-NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
+
+#import "GPUimageLocalNewTwoFiltter.h"
+NSString *const kGPUimageLocalNewTwoTextureVertexShaderString= SHADER_STRING
 (
  attribute vec4 position;
  attribute vec4 inputTextureCoordinate;
@@ -15,19 +23,15 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
      textureCoordinate = inputTextureCoordinate.xy;
      textureCoordinate2 = inputTextureCoordinate2.xy;
  }
-);
 
-
-@implementation GPUImageTwoInputFilter
-
-#pragma mark -
-#pragma mark Initialization and teardown
+ );
+@implementation GPUimageLocalNewTwoFiltter
 
 - (id)initWithFragmentShaderFromString:(NSString *)fragmentShaderString;
 {
-    if (!(self = [self initWithVertexShaderFromString:kGPUImageTwoInputTextureVertexShaderString fragmentShaderFromString:fragmentShaderString]))
+    if (!(self = [self initWithVertexShaderFromString:kGPUimageLocalNewTwoTextureVertexShaderString fragmentShaderFromString:fragmentShaderString]))
     {
-		return nil;
+        return nil;
     }
     
     return self;
@@ -37,38 +41,51 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
 {
     if (!(self = [super initWithVertexShaderFromString:vertexShaderString fragmentShaderFromString:fragmentShaderString]))
     {
-		return nil;
+        return nil;
     }
-    
+
     inputRotation2 = kGPUImageNoRotation;
-    
+
     hasSetFirstTexture = NO;
-    
+
     hasReceivedFirstFrame = NO;
     hasReceivedSecondFrame = NO;
     firstFrameWasVideo = NO;
     secondFrameWasVideo = NO;
     firstFrameCheckDisabled = NO;
     secondFrameCheckDisabled = NO;
-    
+
     firstFrameTime = kCMTimeInvalid;
     secondFrameTime = kCMTimeInvalid;
-        
+
     runSynchronouslyOnVideoProcessingQueue(^{
         [GPUImageContext useImageProcessingContext];
+        
+        [GPUImageContext useImageProcessingContext];
+       
+
+        secondFilterPositionAttribute = [filterProgram attributeIndex:@"position"];
         filterSecondTextureCoordinateAttribute = [filterProgram attributeIndex:@"inputTextureCoordinate2"];
         
         filterInputTextureUniform2 = [filterProgram uniformIndex:@"inputImageTexture2"]; // This does assume a name of "inputImageTexture2" for second input texture in the fragment shader
+       
+    
+        glEnableVertexAttribArray(secondFilterPositionAttribute);
         glEnableVertexAttribArray(filterSecondTextureCoordinateAttribute);
+        
+        
     });
+
     
     return self;
 }
 
+
 - (void)initializeAttributes;
 {
     [super initializeAttributes];
-    [filterProgram addAttribute:@"inputTextureCoordinate2"];
+     [filterProgram addAttribute:@"inputTextureCoordinate2"];
+
 }
 
 - (void)disableFirstFrameCheck;
@@ -86,9 +103,6 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
 
 - (void)renderToTextureWithVertices:(const GLfloat *)vertices textureCoordinates:(const GLfloat *)textureCoordinates;
 {
-
-    NSLog(@"%f %f",vertices[0],vertices[1]);
-    
     if (self.preventRendering)
     {
         [firstInputFramebuffer unlock];
@@ -96,33 +110,62 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
         return;
     }
     
+
+    
     [GPUImageContext setActiveShaderProgram:filterProgram];
+  
+    
     outputFramebuffer = [[GPUImageContext sharedFramebufferCache] fetchFramebufferForSize:[self sizeOfFBO] textureOptions:self.outputTextureOptions onlyTexture:NO];
     [outputFramebuffer activateFramebuffer];
     if (usingNextFrameForImageCapture)
     {
         [outputFramebuffer lock];
     }
-
+    
     [self setUniformsForProgramAtIndex:0];
-        
+    
     glClearColor(backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha);
     glClear(GL_COLOR_BUFFER_BIT);
     
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, [firstInputFramebuffer texture]);
-	glUniform1i(filterInputTextureUniform, 2);	
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, [firstInputFramebuffer texture]);
+    glUniform1i(filterInputTextureUniform, 2);
     
+//    glActiveTexture(GL_TEXTURE3);
+//    glBindTexture(GL_TEXTURE_2D, [secondInputFramebuffer texture]);
+//    glUniform1i(filterInputTextureUniform2, 3);
+    
+    glVertexAttribPointer(filterPositionAttribute, 2, GL_FLOAT, 0, 0, vertices);
+
+    glVertexAttribPointer(filterTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, textureCoordinates);
+    
+
+    glVertexAttribPointer(filterSecondTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, [[self class] textureCoordinatesForRotation:inputRotation2]);
+    
+     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    
+    
+//    //****
+//     [GPUImageContext setActiveShaderProgram:secondFilterProgram];
+      GLfloat noRotationTexture[] = {
+            -0.5f, 0.5f,
+            -0.5f, -0.5f,
+            0.5f, 0.5f,
+            0.5f, -0.5f,
+      };
+
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, [secondInputFramebuffer texture]);
     glUniform1i(filterInputTextureUniform2, 3);
-    
-    glVertexAttribPointer(filterPositionAttribute, 2, GL_FLOAT, 0, 0, vertices);
-	glVertexAttribPointer(filterTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, textureCoordinates);
-    glVertexAttribPointer(filterSecondTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, [[self class] textureCoordinatesForRotation:inputRotation2]);
-     NSLog(@"%lu",sizeof(vertices)/2);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, sizeof(vertices)/2);
 
+     glVertexAttribPointer(secondFilterPositionAttribute, 2, GL_FLOAT, 0, 0, noRotationTexture);
+    
+    
+    glVertexAttribPointer(filterSecondTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, textureCoordinates);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
     [firstInputFramebuffer unlock];
     [secondInputFramebuffer unlock];
     if (usingNextFrameForImageCapture)
@@ -206,24 +249,19 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
         rotatedSize.height = sizeToRotate.width;
     }
     
-    return rotatedSize; 
+    return rotatedSize;
 }
 
 - (void)newFrameReadyAtTime:(CMTime)frameTime atIndex:(NSInteger)textureIndex;
 {
-    
- 
-    
-    
-    
     // You can set up infinite update loops, so this helps to short circuit them
     if (hasReceivedFirstFrame && hasReceivedSecondFrame)
     {
         return;
     }
-
+    
     BOOL updatedMovieFrameOppositeStillImage = NO;
-
+    
     if (textureIndex == 0)
     {
         hasReceivedFirstFrame = YES;
@@ -232,7 +270,7 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
         {
             hasReceivedSecondFrame = YES;
         }
-
+        
         if (!CMTIME_IS_INDEFINITE(frameTime))
         {
             if CMTIME_IS_INDEFINITE(secondFrameTime)
@@ -249,7 +287,7 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
         {
             hasReceivedFirstFrame = YES;
         }
-
+        
         if (!CMTIME_IS_INDEFINITE(frameTime))
         {
             if CMTIME_IS_INDEFINITE(firstFrameTime)
@@ -258,27 +296,16 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
             }
         }
     }
-
+    
     // || (hasReceivedFirstFrame && secondFrameCheckDisabled) || (hasReceivedSecondFrame && firstFrameCheckDisabled)
     if ((hasReceivedFirstFrame && hasReceivedSecondFrame) || updatedMovieFrameOppositeStillImage)
     {
-
-
-        NSLog(@"++++++++%ld",(long)textureIndex);
         CMTime passOnFrameTime = (!CMTIME_IS_INDEFINITE(firstFrameTime)) ? firstFrameTime : secondFrameTime;
         [super newFrameReadyAtTime:passOnFrameTime atIndex:0]; // Bugfix when trying to record: always use time from first input (unless indefinite, in which case use the second input)
         hasReceivedFirstFrame = NO;
         hasReceivedSecondFrame = NO;
-
     }
-    
-    
-    
-    
-    
-    
 }
-
 
 
 @end
